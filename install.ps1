@@ -62,7 +62,7 @@ try {
   Push-Location $installDirectory
   try {
     Write-Host 'Preparazione app...' -ForegroundColor Cyan
-    npm.cmd ci --no-audit --no-fund
+    npm.cmd install --no-audit --no-fund
     if ($LASTEXITCODE -ne 0) { throw 'Installazione dei componenti non riuscita.' }
     npm.cmd run build
     if ($LASTEXITCODE -ne 0) { throw 'Preparazione non riuscita.' }
