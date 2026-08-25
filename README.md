@@ -12,7 +12,7 @@ irm https://raw.githubusercontent.com/OmarPrampolini/preventivatoreluc/main/inst
 
 L’installer:
 
-- installa Node.js se necessario;
+- prepara automaticamente un motore Node.js portatile se necessario, senza privilegi amministrativi;
 - scarica e prepara l’app in `%LOCALAPPDATA%\PreventivatoreBenifin`;
 - crea il collegamento **Preventivatore Benifin** sul desktop;
 - apre automaticamente l’app nel browser.

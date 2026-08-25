@@ -3,6 +3,15 @@ $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 $localUrl = 'http://localhost:3000/'
 
+$portableNode = Get-ChildItem -LiteralPath (Join-Path $projectDirectory '.runtime') -Directory -Filter 'node-v*-win-x64' -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+if ($portableNode) {
+  $env:Path = "$($portableNode.FullName);$env:Path"
+}
+
+if (-not (Get-Command npm.cmd -ErrorAction SilentlyContinue)) {
+  throw 'Il motore locale non è disponibile. Ripeti installazione.'
+}
+
 function Test-PreventivatoreOnline {
   try {
     $response = Invoke-WebRequest -UseBasicParsing -Uri $localUrl -TimeoutSec 1

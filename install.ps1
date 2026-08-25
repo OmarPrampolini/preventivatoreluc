@@ -6,13 +6,7 @@ $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('preventivatore-be
 $archivePath = Join-Path $temporaryRoot 'preventivatore.zip'
 $extractDirectory = Join-Path $temporaryRoot 'estratto'
 
-function Refresh-Path {
-  $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
-  $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-  $env:Path = "$machinePath;$userPath"
-}
-
-function Ensure-Node {
+function Enable-Node {
   $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
   $nodeIsRecent = $false
   if ($nodeCommand) {
@@ -21,19 +15,28 @@ function Ensure-Node {
   }
 
   if ($nodeIsRecent) { return }
-  if (-not (Get-Command winget.exe -ErrorAction SilentlyContinue)) {
-    throw 'Node.js 22 o superiore non è installato e Windows Package Manager non è disponibile.'
-  }
 
-  Write-Host 'Installazione di Node.js in corso...' -ForegroundColor Cyan
-  winget.exe install --id OpenJS.NodeJS.LTS --exact --accept-package-agreements --accept-source-agreements --silent
-  if ($LASTEXITCODE -ne 0) { throw 'Installazione di Node.js non riuscita.' }
-  Refresh-Path
+  Write-Host 'Preparazione del motore locale...' -ForegroundColor Cyan
+  $checksums = Invoke-WebRequest -UseBasicParsing -Uri 'https://nodejs.org/dist/latest-v22.x/SHASUMS256.txt'
+  $nodeArchiveMatch = [regex]::Match($checksums.Content, '(?m)^[a-f0-9]+\s+(node-v22\.[0-9.]+-win-x64\.zip)$')
+  if (-not $nodeArchiveMatch.Success) { throw 'Non è stato possibile trovare il motore locale.' }
+
+  $nodeArchiveName = $nodeArchiveMatch.Groups[1].Value
+  $nodeArchivePath = Join-Path $temporaryRoot $nodeArchiveName
+  $runtimeDirectory = Join-Path $installDirectory '.runtime'
+  New-Item -ItemType Directory -Path $runtimeDirectory -Force | Out-Null
+  Invoke-WebRequest -UseBasicParsing -Uri "https://nodejs.org/dist/latest-v22.x/$nodeArchiveName" -OutFile $nodeArchivePath
+  Expand-Archive -LiteralPath $nodeArchivePath -DestinationPath $runtimeDirectory -Force
+
+  $portableNodeDirectory = Join-Path $runtimeDirectory ($nodeArchiveName -replace '\.zip$', '')
+  $env:Path = "$portableNodeDirectory;$env:Path"
+  if (-not (Get-Command node.exe -ErrorAction SilentlyContinue)) {
+    throw 'Il motore locale non è stato preparato correttamente.'
+  }
 }
 
 try {
   Write-Host 'Installazione Preventivatore Benifin' -ForegroundColor Green
-  Ensure-Node
 
   New-Item -ItemType Directory -Path $temporaryRoot, $extractDirectory -Force | Out-Null
   Write-Host 'Download app...' -ForegroundColor Cyan
@@ -54,6 +57,7 @@ try {
 
   New-Item -ItemType Directory -Path $installDirectory -Force | Out-Null
   Copy-Item -Path (Join-Path $sourceDirectory.FullName '*') -Destination $installDirectory -Recurse -Force
+  Enable-Node
 
   Push-Location $installDirectory
   try {
